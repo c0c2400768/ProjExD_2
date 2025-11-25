@@ -196,6 +196,7 @@ def main():
         if not tate:
             vy *= -1   
             avy *= -1
+            
 
         bb_rct.move_ip(avx, avy)
         bb_rct.width = bb_img.get_rect().width
