@@ -54,6 +54,28 @@ def gameover(screen: pg.Surface):
     pg.time.wait(5000)
 
 
+def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
+    """
+    時間とともに爆弾が拡大・加速する関数
+    戻り値:bb_imgs, bb_accs
+    bb_imgs: 拡大した爆弾画像のリスト
+    bb_accs: 拡大に伴う加速度のリスト
+    1秒ごとに爆弾画像が大きくなり、加速度も増加する。
+    それぞれ10段階まで用意する。
+    """
+    bb_imgs = []
+    for r in range(1, 11):
+        bb_img = pg.Surface((20*r, 20*r))
+        bb_img.set_colorkey((0, 0, 0))
+        bb_img.fill((0, 0, 0))
+        pg.draw.circle(bb_img, (255, 0, 0), (10*r, 10*r), 10*r)
+        bb_imgs.append(bb_img)
+
+    bb_accs = [a for a in range(1,11)]
+
+    return bb_imgs, bb_accs
+
+
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -67,6 +89,8 @@ def main():
     kk_rct = kk_img.get_rect()
     kk_rct.center = 300, 200
 
+    bb_imgs, bb_accs = init_bb_imgs()
+    bb_img = bb_imgs[0]
     bb_rct = bb_img.get_rect()
     bb_rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
     vx, vy = +5, +5
@@ -84,6 +108,7 @@ def main():
         
         screen.blit(bg_img, [0, 0]) 
 
+
         key_lst = pg.key.get_pressed()
         sum_mv = [0, 0]
         for k, mv in DELTA.items():
@@ -95,12 +120,33 @@ def main():
         if check_bound(kk_rct) != (True, True):
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
         screen.blit(kk_img, kk_rct)
+        
+        idx = min(tmr // 500, 9)
+
+        avx = vx * bb_accs[idx]
+        avy = vy * bb_accs[idx]
+        bb_img = bb_imgs[idx]
+
+        old_center = bb_rct.center
+        bb_rct = bb_img.get_rect()
+        bb_rct.center = old_center
 
         yoko, tate = check_bound(bb_rct)
         if not yoko:
             vx *= -1
         if not tate:
             vy *= -1   
+
+        avx = vx * bb_accs[idx]
+        avy = vy * bb_accs[idx]
+
+        bb_rct.move_ip(avx, avy)
+        bb_rct.width = bb_img.get_rect().width
+        bb_rct.height = bb_img.get_rect().height
+        screen.blit(bg_img, [0, 0])
+        screen.blit(bb_img, bb_rct)
+        screen.blit(kk_img, kk_rct)
+
         
         bb_rct.move_ip(vx, vy)
         screen.blit(bb_img, bb_rct)
