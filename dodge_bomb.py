@@ -35,18 +35,18 @@ def gameover(screen: pg.Surface):
     両サイドにこうかとんの画像を表示する。
     5秒間表示した後、関数を終了する。
     """
-    overlay = pg.Surface((WIDTH, HEIGHT))
+    overlay: pg.Surface = pg.Surface((WIDTH, HEIGHT))
     overlay.fill((0, 0, 0))
     overlay.set_alpha(200)
 
-    font = pg.font.Font(None, 100)    
-    text_surf = font.render("Game Over", True, (255, 255, 255))  # 白文字
-    text_rect = text_surf.get_rect(center=(WIDTH//2, HEIGHT//2))
+    font: pg.font.Font = pg.font.Font(None, 100)
+    text_surf: pg.Surface = font.render("Game Over", True, (255, 255, 255))
+    text_rect: pg.Rect = text_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     overlay.blit(text_surf, text_rect)
 
-    kk_img = pg.transform.flip(pg.image.load("fig/8.png"), True, False)
-    kk_rect_left  = kk_img.get_rect(center=(WIDTH// 2 - 240, HEIGHT // 2))
-    kk_rect_right = kk_img.get_rect(center=(WIDTH // 2 + 240, HEIGHT // 2))
+    kk_img: pg.Surface = pg.transform.flip(pg.image.load("fig/8.png"), True, False)
+    kk_rect_left: pg.Rect  = kk_img.get_rect(center=(WIDTH // 2 - 240, HEIGHT // 2))
+    kk_rect_right: pg.Rect = kk_img.get_rect(center=(WIDTH // 2 + 240, HEIGHT // 2))
     overlay.blit(kk_img, kk_rect_left)
     overlay.blit(kk_img, kk_rect_right)
     
@@ -64,15 +64,15 @@ def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
     1秒ごとに爆弾画像が大きくなり、加速度も増加する。
     それぞれ10段階まで用意する。
     """
-    bb_imgs = []
+    bb_imgs: list[pg.Surface] = []
     for r in range(1, 11):
-        bb_img = pg.Surface((20*r, 20*r))
+        bb_img: pg.Surface = pg.Surface((20 * r, 20 * r))
         bb_img.set_colorkey((0, 0, 0))
         bb_img.fill((0, 0, 0))
         pg.draw.circle(bb_img, (255, 0, 0), (10*r, 10*r), 10*r)
         bb_imgs.append(bb_img)
 
-    bb_accs = [a for a in range(1,11)]
+    bb_accs: list[int] = [a for a in range(1, 11)]
 
     return bb_imgs, bb_accs
 
@@ -83,7 +83,7 @@ def get_kk_imgs() -> dict[tuple[int, int], pg.Surface]:
     戻り値:kk_imgs
     kk_imgs: 方向キーに対応したこうかとん画像の辞書
     """
-    kk_dict = {
+    kk_dict: dict[tuple[int, int], pg.Surface] = {
         (0, 0): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), True, False), 0, 0.9),       # 立ち止まり
         (5, 0): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), True, False), 0, 0.9),       # 右
         (5, -5): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), True, False), 45, 0.9),    # 右上
@@ -97,7 +97,31 @@ def get_kk_imgs() -> dict[tuple[int, int], pg.Surface]:
 
     return kk_dict
 
+def calc_orienration(org: pg.Rect, dst: pg.Rect, current_xy: tuple[float, float]) -> tuple[float, float]:
+    """
+    こうかとんに対しての追従型爆弾の移動ベクトルを計算する関数
+    引数org: 爆弾rect
+    引数dst: こうかとんrect
+    引数current_xy: 現在の移動ベクトル
+    戻り値: new_xy
+    new_xy: 新しい移動ベクトル
+    こうかとんの位置に基づいて、爆弾の新しい移動ベクトルを計算する。
+    """
+    bb_x, bb_y = org.center
+    kk_x, kk_y = dst.center
+    diff_x: float = kk_x - bb_x
+    diff_y: float = kk_y - bb_y
+    distance: float = (diff_x ** 2 + diff_y ** 2) ** 0.5
 
+    if distance < 300:
+        return current_xy
+
+    target_norm: float = (5 ** 2 + 5 ** 2) ** 0.5
+    scale: float = target_norm / distance
+    new_vx: float = diff_x * scale
+    new_vy: float = diff_y * scale
+
+    return new_vx, new_vy
 
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
@@ -149,36 +173,37 @@ def main():
         if check_bound(kk_rct) != (True, True):
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
         screen.blit(kk_img, kk_rct)
+
+        vx, vy = calc_orienration(bb_rct, kk_rct, (vx, vy))
         
         idx = min(tmr // 500, 9)
 
-        avx = vx * bb_accs[idx]
-        avy = vy * bb_accs[idx]
         bb_img = bb_imgs[idx]
-
         old_center = bb_rct.center
         bb_rct = bb_img.get_rect()
         bb_rct.center = old_center
 
-        yoko, tate = check_bound(bb_rct)
-        if not yoko:
-            vx *= -1
-        if not tate:
-            vy *= -1   
-
         avx = vx * bb_accs[idx]
         avy = vy * bb_accs[idx]
+
+        next_rct = bb_rct.copy()
+        next_rct.move_ip(avx, avy)
+
+        yoko, tate = check_bound(next_rct)
+        if not yoko:
+            vx *= -1
+            avx *= -1
+        if not tate:
+            vy *= -1   
+            avy *= -1
 
         bb_rct.move_ip(avx, avy)
         bb_rct.width = bb_img.get_rect().width
         bb_rct.height = bb_img.get_rect().height
+
         screen.blit(bg_img, [0, 0])
         screen.blit(bb_img, bb_rct)
         screen.blit(kk_img, kk_rct)
-
-        
-        bb_rct.move_ip(vx, vy)
-        screen.blit(bb_img, bb_rct)
         pg.display.update()
         tmr += 1
         clock.tick(50)
