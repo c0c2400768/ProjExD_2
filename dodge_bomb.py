@@ -14,6 +14,12 @@ DELTA = {
 }
 
 def check_bound(rct):
+    """
+    画面内or画面外を判定する関数
+    引数rct: こうかとんrectまたは爆弾rect
+    戻り値:yoko, tate
+    画面内:True, 画面外:False
+    """
     yoko, tate = True, True
     if rct.left < 0 or WIDTH < rct.right:
         yoko = False
@@ -21,16 +27,46 @@ def check_bound(rct):
         tate = False
     return yoko, tate
 
+def gameover(screen: pg.Surface):
+    """
+    ゲームオーバー画面を表示する関数
+    画面全体を暗くし、中央に「Game Over」の文字と
+    両サイドにこうかとんの画像を表示する。
+    5秒間表示した後、関数を終了する。
+    """
+    overlay = pg.Surface((WIDTH, HEIGHT))
+    overlay.fill((0, 0, 0))
+    overlay.set_alpha(200)
+
+    font = pg.font.Font(None, 100)    
+    text_surf = font.render("Game Over", True, (255, 255, 255))  # 白文字
+    text_rect = text_surf.get_rect(center=(WIDTH//2, HEIGHT//2))
+    overlay.blit(text_surf, text_rect)
+
+    kk_img = pg.transform.flip(pg.image.load("fig/8.png"), True, False)
+    kk_rect_left  = kk_img.get_rect(center=(WIDTH// 2 - 240, HEIGHT // 2))
+    kk_rect_right = kk_img.get_rect(center=(WIDTH // 2 + 240, HEIGHT // 2))
+    overlay.blit(kk_img, kk_rect_left)
+    overlay.blit(kk_img, kk_rect_right)
+    
+    screen.blit(overlay, (0, 0))
+    pg.display.update()
+    pg.time.wait(5000)
+
+
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load("fig/pg_bg.jpg")    
     kk_img = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
+
     bb_img = pg.Surface((20, 20))
     pg.draw.circle(bb_img, (255, 0, 0), (10, 10), 10)
     bb_img.set_colorkey((0, 0, 0))
+
     kk_rct = kk_img.get_rect()
     kk_rct.center = 300, 200
+
     bb_rct = bb_img.get_rect()
     bb_rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
     vx, vy = +5, +5
@@ -43,6 +79,7 @@ def main():
             
         if kk_rct.colliderect(bb_rct):
             print("ゲームオーバー")
+            gameover(screen)
             return
         
         screen.blit(bg_img, [0, 0]) 
