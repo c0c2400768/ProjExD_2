@@ -2,6 +2,7 @@ import os
 import sys
 import pygame as pg
 import random
+from pygame.transform import rotozoom
 
 
 WIDTH, HEIGHT = 1100, 650
@@ -75,6 +76,28 @@ def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
 
     return bb_imgs, bb_accs
 
+def get_kk_imgs() -> dict[tuple[int, int], pg.Surface]:
+
+    """
+    こうかとん画像を辞書型で管理する関数
+    戻り値:kk_imgs
+    kk_imgs: 方向キーに対応したこうかとん画像の辞書
+    """
+    kk_dict = {
+        (0, 0): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), True, False), 0, 0.9),       # 立ち止まり
+        (5, 0): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), True, False), 0, 0.9),       # 右
+        (5, -5): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), True, False), 45, 0.9),    # 右上
+        (0,-5): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), False, True), 270, 0.9),     # 上   
+        (-5,-5): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), False, False), 315, 0.9),     # 左上
+        (-5,0): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), False, False), 0, 0.9),       # 左
+        (-5,5): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), False, False), 45, 0.9),     # 左下
+        (0,5): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), False, True), 90, 0.9),       # 下
+        (5,5): rotozoom(pg.transform.flip(pg.image.load("fig/3.png"), True, False), 315, 0.9),       # 右下
+    }
+
+    return kk_dict
+
+
 
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
@@ -96,6 +119,9 @@ def main():
     vx, vy = +5, +5
     clock = pg.time.Clock()
     tmr = 0
+
+    kk_imgs = get_kk_imgs()
+
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT: 
@@ -111,12 +137,15 @@ def main():
 
         key_lst = pg.key.get_pressed()
         sum_mv = [0, 0]
+
         for k, mv in DELTA.items():
             if key_lst[k]:
                 sum_mv[0] += mv[0]
                 sum_mv[1] += mv[1]
 
+        kk_img = kk_imgs[tuple(sum_mv)]
         kk_rct.move_ip(sum_mv)
+
         if check_bound(kk_rct) != (True, True):
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
         screen.blit(kk_img, kk_rct)
